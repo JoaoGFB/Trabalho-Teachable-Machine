@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Apresentação</title>
+  <title>Apresentação com Voz</title>
   <style>
     body {
       margin: 0;
@@ -12,7 +12,6 @@
       justify-content: center;
       align-items: center;
     }
-
     input[type="file"] {
       padding: 12px 20px;
       border: none;
@@ -22,7 +21,6 @@
       font-size: 16px;
       cursor: pointer;
     }
-
     canvas {
       display: block;
       margin: auto;
@@ -30,78 +28,30 @@
       max-height: 100%;
     }
   </style>
+  <div id="label-container" 
+  style="position: fixed; bottom: 10px; left: 10px; 
+  background: rgba(0,0,0,0.6); color:
+   white; padding: 8px; border-radius: 6px; font-family: sans-serif;"></div>
 </head>
+
 <body>
   <input type="file" id="fileInput" accept="application/pdf">
   <canvas id="pdf-render" style="display:none;"></canvas>
+<!-- TensorFlow.js -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0"></script>
 
-  <!-- biblioteca PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-  <script>
-    const fileInput = document.getElementById("fileInput");
-    const canvas = document.getElementById("pdf-render");
-    const ctx = canvas.getContext("2d");
+<!-- Teachable Machine Audio -->
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/audio@0.8/dist/teachablemachine-audio.min.js"></script>
+<!-- versão alternativa <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/audio/dist/teachablemachine-audio.min.js"></script>-->
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js";
+</script>
 
-    let pdfDoc = null;
-    let pageNum = 1;
-
-    function renderPage(num) {
-      pdfDoc.getPage(num).then(page => {
-        const viewport = page.getViewport({ scale: 1.6 });
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        const renderCtx = {
-          canvasContext: ctx,
-          viewport: viewport
-        };
-        page.render(renderCtx);
-      });
-    }
-
-    function nextSlide() {
-      if (pageNum < pdfDoc.numPages) {
-        pageNum++;
-        renderPage(pageNum);
-      }
-    }
-
-    function prevSlide() {
-      if (pageNum > 1) {
-        pageNum--;
-        renderPage(pageNum);
-      }
-    }
-
-    //navegação por teclado (setas esquerda e direita), isso pode ser tirado depois
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowRight") {
-        nextSlide();
-      } else if (e.key === "ArrowLeft") {
-        prevSlide();
-      }
-    });
-
-    //upload do PDF
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files[0];
-      if (file) {
-        const fileURL = URL.createObjectURL(file);
-
-        pdfjsLib.getDocument(fileURL).promise.then(pdfDoc_ => {
-          pdfDoc = pdfDoc_;
-          pageNum = 1;
-          fileInput.style.display = "none"; // esconde botão
-          canvas.style.display = "block";   // mostra apresentação
-          renderPage(pageNum);
-          document.documentElement.requestFullscreen?.();
-        });
-      }
-    });
-
-    //no teachable machine chamar nextSlide() ou prevSlide()
-    // ex: se reconhecer "próximo" => nextSlide();
-    //     se reconhecer "voltar" => prevSlide();
-  </script>
+<!-- Seus scripts -->
+<script src="pdf.js"></script>
+<script src="voice.js"></script>
 </body>
-</html>
+</html> 
