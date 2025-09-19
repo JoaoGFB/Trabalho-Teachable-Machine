@@ -1,4 +1,4 @@
-const MODEL_PATH = "my_modelnovo/";
+const MODEL_PATH = "https://teachablemachine.withgoogle.com/models/1TgOh45FD/";
 let model, webcam, labelContainer, maxPredictions;
 let ativo = false;
 let isRunning = false;
@@ -122,7 +122,7 @@ async function predict() {
         }
         
         const comando = maior.className;
-        const probabilidade = maior.probability.toFixed(2);
+        const probabilidade = Number(maior.probability.toFixed(2));
         
         // Atualiza a interface
         if (labelContainer) {
@@ -137,44 +137,37 @@ async function predict() {
     }
 }
 
+let ultimaAcao = 0;
 function processarComando(comando, probabilidade) {
     // Só processa se a probabilidade for maior que 70%
     if (probabilidade < 0.7) return;
     
+    comando = comando.trim().toLowerCase();
     console.log(`Comando: ${comando}, Probabilidade: ${probabilidade}`);
-    
-    if (comando === "ligar") {
-        ativo = true;
-        console.log("Sistema ATIVADO");
-        return;
+    const agora = Date.now();
+    if (agora - ultimaAcao < 1000) { 
+        // menos de 1 segundo desde a última ação
+        return; 
     }
-    if (comando === "desligar") {
-        ativo = false;
-        console.log("Sistema DESLIGADO");
-        return;
-    }
-
-    if (!ativo) return;
+    ultimaAcao = agora;
 
     // CORREÇÃO AQUI: Mapeando os novos comandos
     switch (comando) {
-        case "subir":
+        case 'subir':
             window.scrollBy(0, -200);
             break;
-        case "descer":
+        case 'descer':
             window.scrollBy(0, 200);
             break;
-        case "Direita":  // NOVO COMANDO PARA AVANÇAR
-        case "direita":  // versão em minúsculo
+        case 'direita':  // versão em minúsculo
             window.nextSlide?.();
             console.log("Avançando slide...");
             break;
-        case "Esquerda": // NOVO COMANDO PARA VOLTAR
-        case "esquerda": // versão em minúsculo
+        case 'esquerda': // versão em minúsculo
             window.prevSlide?.();
             console.log("Voltando slide...");
             break;
-        case "Botão":
+        case 'botão':
             document.getElementById("meuBotao")?.click();
             break;
         default:
