@@ -2,15 +2,18 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Apresentação com Voz</title>
+  <title>Apresentação com Reconhecimento por Imagem</title>
   <style>
     body {
       margin: 0;
-      height: 100vh;
+      min-height: 100vh;
       background: white;
       display: flex;
       justify-content: center;
       align-items: center;
+      flex-direction: column;
+      font-family: Arial, sans-serif;
+      padding: 20px;
     }
     input[type="file"] {
       padding: 12px 20px;
@@ -20,6 +23,49 @@
       color: black;
       font-size: 16px;
       cursor: pointer;
+      margin-bottom: 20px;
+    }
+    #startButton {
+      padding: 15px 30px;
+      border: none;
+      border-radius: 8px;
+      background: #4CAF50;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      margin: 10px;
+      transition: background 0.3s;
+    }
+    #stopButton {
+      padding: 15px 30px;
+      border: none;
+      border-radius: 8px;
+      background: #dc3545;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      margin: 10px;
+      transition: background 0.3s;
+    }
+    #fullscreenButton {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    #startButton:hover {
+      background: #45a049;
+    }
+    #stopButton:hover {
+      background: #c82333;
+    }
+    #startButton:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
     }
     canvas {
       display: block;
@@ -27,31 +73,132 @@
       max-width: 100%;
       max-height: 100%;
     }
+    .status {
+      margin-top: 10px;
+      color: #666;
+      font-size: 14px;
+      text-align: center;
+    }
+    .loading {
+      color: #007bff;
+    }
+    .error {
+      color: #dc3545;
+    }
+    .success {
+      color: #28a745;
+    }
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    #webcam-container {
+      margin: 20px 0;
+      border: 2px solid #007bff;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    #label-container {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 16px;
+      z-index: 1000;
+    }
   </style>
-  <div id="label-container" 
-  style="position: fixed; bottom: 10px; left: 10px; 
-  background: rgba(0,0,0,0.6); color:
-   white; padding: 8px; border-radius: 6px; font-family: sans-serif;"></div>
 </head>
 
 <body>
   <input type="file" id="fileInput" accept="application/pdf">
+  
+  <div class="button-container">
+    <button id="startButton" onclick="initImageControl()">📷 Ativar Reconhecimento por Imagem</button>
+    <button id="stopButton" onclick="stopImageControl()" style="display:none;">⏹️ Parar Reconhecimento</button>
+    <button id="fullscreenButton" onclick="activateFullscreen()">📺 Tela Cheia</button>
+  </div>
+  
+  <div id="webcam-container"></div>
+  <div id="statusMessage" class="status loading">Carregando bibliotecas...</div>
   <canvas id="pdf-render" style="display:none;"></canvas>
-<!-- TensorFlow.js -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0"></script>
+  
+  <div id="label-container">Aguardando inicialização...</div>
 
-<!-- Teachable Machine Audio -->
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/audio@0.8/dist/teachablemachine-audio.min.js"></script>
-<!-- versão alternativa <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/audio/dist/teachablemachine-audio.min.js"></script>-->
-<!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-<script>
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js";
-</script>
+  
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
-<!-- Seus scripts -->
-<script src="pdf.js"></script>
-<script src="voice.js"></script>
+  <!-- Teachable Machine Image -->
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js";
+  </script>
+
+  <!-- Seus scripts -->
+  <script src="pdf.js"></script>
+  <script src="image.js"></script> <!-- Mudei de voice.js para image.js -->
+
+  <script>
+    // Verifica quando as bibliotecas estão carregadas
+    document.addEventListener('DOMContentLoaded', function() {
+      const statusDiv = document.getElementById('statusMessage');
+      const startButton = document.getElementById('startButton');
+      const stopButton = document.getElementById('stopButton');
+      const fullscreenButton = document.getElementById('fullscreenButton');
+      
+      function checkLibraries() {
+        // Verifica se TensorFlow.js está carregado
+        if (typeof tf === 'undefined') {
+          statusDiv.textContent = 'Aguardando TensorFlow.js...';
+          return;
+        }
+        
+        // Verifica se Teachable Machine Image está carregado
+        if (typeof tmImage === 'undefined') {
+          statusDiv.textContent = 'Aguardando Teachable Machine Image...';
+          return;
+        }
+        
+        // Verifica se PDF.js está carregado
+        if (typeof pdfjsLib === 'undefined') {
+          statusDiv.textContent = 'Aguardando PDF.js...';
+          return;
+        }
+        
+        // Todas as bibliotecas carregadas
+        statusDiv.textContent = 'Pronto! Clique para ativar o reconhecimento por imagem.';
+        statusDiv.className = 'status success';
+        startButton.disabled = false;
+        stopButton.style.display = 'block';
+        fullscreenButton.style.display = 'block';
+      }
+      
+      // Verifica a cada segundo
+      const checkInterval = setInterval(checkLibraries, 1000);
+      
+      // Para de verificar após 10 segundos
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (startButton.disabled) {
+          statusDiv.textContent = 'Timeout: Recarregue a página ou verifique a conexão.';
+          statusDiv.className = 'status error';
+        }
+      }, 10000);
+      
+      // Primeira verificação após 2 segundos
+      setTimeout(checkLibraries, 2000);
+    });
+  </script>
 </body>
-</html> 
+</html>

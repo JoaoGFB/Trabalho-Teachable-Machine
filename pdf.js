@@ -33,7 +33,7 @@ function prevSlide() {
   }
 }
 
-// 🔹 deixa acessível globalmente (para o voice.js usar também)
+// 🔹 deixa acessível globalmente
 window.nextSlide = nextSlide;
 window.prevSlide = prevSlide;
 
@@ -55,10 +55,9 @@ fileInput.addEventListener("change", () => {
     pdfjsLib.getDocument(fileURL).promise.then(pdfDoc_ => {
       pdfDoc = pdfDoc_;
       pageNum = 1;
-      fileInput.style.display = "none"; // esconde botão
-      canvas.style.display = "block";   // mostra apresentação
+      fileInput.style.display = "none";
+      canvas.style.display = "block";
       renderPage(pageNum);
-      document.documentElement.requestFullscreen?.();
     });
   }
 });
